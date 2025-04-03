@@ -8,11 +8,11 @@ export default function AboutUs() {
       <section className="relative w-full h-[40vh] md:h-[50vh] overflow-hidden">
         <div className="absolute inset-0 bg-black/60 z-10" />
         <Image
-          src="/placeholder.svg?height=800&width=1600"
+          src="https://akm-img-a-in.tosshub.com/indiatoday/images/photogallery/201611/2_112316011918_0.jpg?VersionId=VU0_VcUNZxzJZQ0i8pL.4wJDqN5ncjgG&size=686:*? height=800&width=1600"
           alt="Community Kitchen volunteers"
-          width={1600}
+          width={800}
           height={800}
-          className="object-cover w-full h-full"
+          className="object-fit w-full h-full"
           priority
         />
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center p-4">
@@ -80,29 +80,34 @@ export default function AboutUs() {
           <div className="grid md:grid-cols-3 gap-8">
             {[
               {
-                name: "Maria Rodriguez",
+                name: "Nagananda P",
                 role: "Executive Director",
                 bio: "With over 15 years in nonprofit management, Maria leads our organization with passion and vision.",
               },
               {
-                name: "David Chen",
+                name: "Goutham JR",
                 role: "Head Chef",
                 bio: "A culinary expert with a background in fine dining who now uses his talents to create nutritious community meals.",
               },
               {
-                name: "Aisha Johnson",
+                name: "Kiran M",
                 role: "Volunteer Coordinator",
                 bio: "Dedicated to building our volunteer program and ensuring everyone has a meaningful experience.",
+              },
+              {
+                name: "Chandan Jain HP",
+                role: "Executive Director",
+                bio: "With over 15 years in nonprofit management, Maria leads our organization with passion and vision.",
               },
             ].map((member, index) => (
               <div key={index} className="bg-black p-6 rounded-lg">
                 <div className="w-24 h-24 bg-purple-200 rounded-full mx-auto mb-4 overflow-hidden">
                   <Image
-                    src={`/placeholder.svg?height=200&width=200&text=${member.name.charAt(0)}`}
+                    src={`https://static.vecteezy.com/system/resources/thumbnails/036/324/708/small/ai-generated-picture-of-a-tiger-walking-in-the-forest-photo.jpg? height=200&width=200&text=${member.name.charAt(0)}`}
                     alt={member.name}
                     width={200}
                     height={200}
-                    className="object-cover"
+                    className="object-fit"
                   />
                 </div>
                 <h3 className="text-xl font-bold text-center mb-2">{member.name}</h3>

@@ -90,7 +90,7 @@ export default function SimpleMap({ listings, selectedListing, setSelectedListin
                   {listing.isVeg ? "Vegetarian" : "Non-Veg"}
                 </Badge>
               </div>
-              <Button asChild className="mt-3 w-full bg-purple-600 hover:bg-purple-700">
+              <Button asChild className="bg-purple-500 hover:bg-purple-400 text-white">
                 <Link href={`/user/${listing.userId}?food=${listing.id}`}>View Details</Link>
               </Button>
             </div>
