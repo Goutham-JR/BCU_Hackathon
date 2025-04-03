@@ -43,7 +43,8 @@ export default function LoginPage() {
       }
   
       console.log('Login successful', data);
-  
+    // Store token in localStorage or cookies if needed
+    document.cookie = `token=${data.token}; path=/;`;
       window.location.href = "/food-map";
     } catch (error) {
       setErrorMessage('Network error. Please try again later.');

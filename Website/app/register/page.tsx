@@ -17,17 +17,54 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [userType, setUserType] = useState("seeker")
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    password: "",
+    address: "",
+    city: "",
+    zip: "",
+    kitchenName: "",
+  });
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false)
-      // Redirect would happen here in a real app
-      window.location.href = "/food-map"
-    }, 1500)
-  }
+  // Handle Input Changes
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+  
+    const userData = {
+      userType,
+      ...formData,
+      kitchenName: userType === "kitchen" ? formData.kitchenName : "",
+    };
+  
+    try {
+      const response = await fetch("http://localhost:5000/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(userData),
+      });
+  
+      if (response.ok) {
+        alert("Registration successful!");
+        window.location.href = "/login";
+      } else {
+        alert("Registration failed. Try again.");
+      }
+    } catch (error) {
+      console.error("Error registering user:", error);
+      alert("An error occurred. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
 
   const nextStep = () => setStep(step + 1)
   const prevStep = () => setStep(step - 1)
@@ -129,22 +166,22 @@ export default function RegisterPage() {
                 >
                   <div className="space-y-2">
                     <Label htmlFor="name">Full Name</Label>
-                    <Input id="name" placeholder="Enter your full name" required />
+                    <Input id="name" name="name" placeholder="Enter your full name"  value={formData.name} onChange={handleChange} required />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="email">Email Address</Label>
-                    <Input id="email" type="email" placeholder="you@example.com" required />
+                    <Input id="email" name="email" type="email" placeholder="you@example.com" value={formData.email} onChange={handleChange} required />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="phone">Phone Number</Label>
-                    <Input id="phone" type="tel" placeholder="(123) 456-7890" required />
+                    <Input id="phone" name="phone" type="tel" placeholder="(123) 456-7890" value={formData.phone} onChange={handleChange} required />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>
-                    <Input id="password" type="password" placeholder="Create a password" required />
+                    <Input id="password" name="password" type="password" placeholder="Create a password" value={formData.password} onChange={handleChange} required />
                     <p className="text-xs text-gray-500">
                       Must be at least 8 characters with a number and special character
                     </p>
@@ -171,17 +208,17 @@ export default function RegisterPage() {
                 >
                   <div className="space-y-2">
                     <Label htmlFor="address">Street Address</Label>
-                    <Input id="address" placeholder="123 Main St" required />
+                    <Input id="address" name="address" placeholder="123 Main St" value={formData.address} onChange={handleChange} required />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="city">City</Label>
-                      <Input id="city" placeholder="City" required />
+                      <Input id="city" name="city" placeholder="City" value={formData.city} onChange={handleChange} required />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="zip">ZIP Code</Label>
-                      <Input id="zip" placeholder="ZIP" required />
+                      <Input id="zip" name="zip" placeholder="ZIP" value={formData.zip} onChange={handleChange} required />
                     </div>
                   </div>
 

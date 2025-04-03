@@ -13,7 +13,6 @@ router.post('/login', async (req, res) => {
   const { username, password } = req.body;
   try {
     const user = await User.findOne({ email: username.toLowerCase() });
-    console.log(username, password)
     if (!user) {
       return res.status(401).json({ message: 'Invalid UserID' });
     }
@@ -22,7 +21,6 @@ router.post('/login', async (req, res) => {
       return res.status(403).json({ message: 'User is Suspended, Please contact to Admin' });
     }
 
-    console.log(user.password)
     if (user.password !== password) {
       return res.status(401).json({ message: 'Invalid password' });
     }
@@ -36,12 +34,12 @@ router.post('/login', async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        accountType: user.accountType,
-        department: user.department,
-        jobTitle:user.jobTitle,
-        phoneNumber:user.phoneNumber,
-        bio:user.bio,
-        avatar:user.avatar,
+        userType: user.userType,
+        phone: user.phone,
+        address:user.address,
+        city:user.city,
+        zip:user.zip,
+        kitchenName:user.kitchenName,
       },
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
@@ -71,5 +69,16 @@ router.post('/logout', (req, res) => {
 
   res.status(200).json({ message: 'Logout successful!' });
 });
+
+router.post("/register", async (req, res) => {
+    try {
+      const user = new User(req.body);
+      await user.save();
+      res.status(201).json({ message: "User registered successfully" });
+    } catch (error) {
+        console.log(error)
+      res.status(500).json({ error: "Error registering user" });
+    }
+  });
 
 module.exports = router;
