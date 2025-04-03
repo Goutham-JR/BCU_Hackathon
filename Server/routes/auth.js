@@ -10,27 +10,19 @@ router.get('/check-auth', verifyToken, (req, res) => {
 });
 
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
+  const { username, password } = req.body;
   try {
-    const user = await User.findOne({ email: email.toLowerCase() });
-
-    console.log(user)
+    const user = await User.findOne({ email: username.toLowerCase() });
+    console.log(username, password)
     if (!user) {
       return res.status(401).json({ message: 'Invalid UserID' });
-    }
-
-    if (user.status === 'Inactive') {
-      return res.status(403).json({ message: 'User is Inactive, Please contact to Admin.' });
     }
 
     if (user.status === 'Suspended') {
       return res.status(403).json({ message: 'User is Suspended, Please contact to Admin' });
     }
 
-    if (user.status !== 'Active') {
-      return res.status(403).json({ message: 'User not verified or access denied' });
-    }
-
+    console.log(user.password)
     if (user.password !== password) {
       return res.status(401).json({ message: 'Invalid password' });
     }

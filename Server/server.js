@@ -16,7 +16,7 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use("/uploads", authRoutes);
+app.use("/api/auth", authRoutes);
 
 
 // Start Server
