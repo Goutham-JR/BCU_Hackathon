@@ -48,9 +48,9 @@ const USER_FOOD_LISTINGS = [
     description:
       "Freshly made vegetable curry with rice. Can serve 4-5 people. Made with organic vegetables and mild spices, suitable for all ages.",
     images: [
-      "/placeholder.svg?height=400&width=600&text=Curry+1",
-      "/placeholder.svg?height=400&width=600&text=Curry+2",
-      "/placeholder.svg?height=400&width=600&text=Curry+3",
+      "https://media.istockphoto.com/id/1278584356/photo/veg-kolhapuri-in-black-bowl-on-dark-slate-table-top-indian-vegetable-curry-dish-vegetarian.jpg?s=612x612&w=0&k=20&c=PZ4axFFJWb4ZOF3DWM59pz10PT89OgtXCll_9z9Waus=",
+      "https://static.india.com/wp-content/uploads/2024/08/Mixed-Vegetable-Curry.jpg",
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ3yHjaw1QAWJedmqv-Z2QW_ajjYQiz-rsuEzY0Ga0YckzCTvlafzdv62Gszwj8CxAObuM&usqp=CAU",
     ],
     prepTime: "2 hours ago",
     isVeg: true,
@@ -63,8 +63,8 @@ const USER_FOOD_LISTINGS = [
     title: "Homemade Bread Loaves",
     description: "Freshly baked whole wheat bread. 3 loaves available. Made this morning with organic flour.",
     images: [
-      "/placeholder.svg?height=400&width=600&text=Bread+1",
-      "/placeholder.svg?height=400&width=600&text=Bread+2",
+      "https://www.shutterstock.com/shutterstock/videos/3411720295/thumb/1.jpg?ip=x480",
+      "https://media.istockphoto.com/id/1144562350/photo/fresh-loaf-of-bread-on-a-cutting-board-and-salt.jpg?s=612x612&w=0&k=20&c=CrScDB-s24grBLK9LULNQIq2wZrPXjRzrGrcJZ-JpqE=",
     ],
     prepTime: "5 hours ago",
     isVeg: true,
@@ -192,7 +192,7 @@ export default function UserProfilePage({ params }: { params: { id: string } }) 
                   src={selectedFood.images[currentImageIndex] || "/placeholder.svg"}
                   alt={selectedFood.title}
                   fill
-                  className="object-cover"
+                  className="object-fit"
                 />
 
                 {/* Image navigation */}

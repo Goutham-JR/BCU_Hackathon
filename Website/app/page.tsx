@@ -42,7 +42,7 @@ export default function Home() {
                 asChild
                 variant="outline"
                 size="lg"
-                className="border-purple-400 text-purple-100 hover:bg-purple-800/50"
+                className="bg-purple-500 hover:bg-purple-400 text-white"
               >
                 <Link href="/about">Learn More</Link>
               </Button>
