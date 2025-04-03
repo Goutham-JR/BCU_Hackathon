@@ -5,11 +5,12 @@ import type React from "react"
 import { useState } from "react"
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { Loader2 } from "lucide-react"
+import { AlertCircle, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
@@ -64,8 +65,13 @@ export default function LoginPage() {
             <CardDescription className="text-purple-100">Log in to your Community Kitchen account</CardDescription>
           </CardHeader>
           {errorMessage && (
-  <div className="text-red-500 text-sm mt-2">{errorMessage}</div>
-)}
+        <Alert variant="destructive" className="border-red-200 bg-red-50/90 backdrop-blur-sm">
+          <AlertCircle className="h-4 w-4 text-red-600" />
+          <AlertDescription className="font-medium text-red-600">
+            {errorMessage}
+          </AlertDescription>
+        </Alert>
+      )}
 
           <CardContent className="pt-6">
             <form onSubmit={handleSubmit} className="space-y-4">

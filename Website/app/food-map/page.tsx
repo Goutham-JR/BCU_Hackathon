@@ -30,7 +30,7 @@ const FOOD_LISTINGS = [
     timePosted: "30 minutes ago",
     isVeg: true,
     userId: "user1",
-    location: { lat: 40.712, lng: -74.006 },
+    location: { lat: 13.00346, lng: 77.63092 },
   },
   {
     id: 2,
@@ -41,7 +41,7 @@ const FOOD_LISTINGS = [
     timePosted: "1 hour ago",
     isVeg: false,
     userId: "user2",
-    location: { lat: 40.714, lng: -74.012 },
+    location: { lat: 13.06817, lng: 77.78824 },
   },
   {
     id: 3,
@@ -52,7 +52,7 @@ const FOOD_LISTINGS = [
     timePosted: "15 minutes ago",
     isVeg: true,
     userId: "user3",
-    location: { lat: 40.718, lng: -74.008 },
+    location: { lat: 13.02937, lng: 77.53693 },
   },
   {
     id: 4,
@@ -63,7 +63,7 @@ const FOOD_LISTINGS = [
     timePosted: "2 hours ago",
     isVeg: false,
     userId: "user4",
-    location: { lat: 40.71, lng: -74.002 },
+    location: { lat: 12.87613, lng: 77.57950 },
   },
 ]
 
