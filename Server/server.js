@@ -4,6 +4,9 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const connectDB = require("./db/db.js") 
 const authRoutes = require("./routes/auth.js")
+const donateRoutes = require("./routes/donate.js")
+
+const path = require('path');
 
 connectDB();
 const app = express();
@@ -17,7 +20,14 @@ app.use(cors({
 }));
 app.use("/uploads", express.static("uploads"));
 
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// app.use(express.json({ limit: '50mb' }));
+// app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
 app.use("/api/auth", authRoutes);
+app.use("/api/donate", donateRoutes);
+
 
 
 // Start Server
