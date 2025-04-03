@@ -95,7 +95,7 @@ export default function Header() {
                 onClick={() => setDropdownOpen(!dropdownOpen)}
                 className="flex items-center space-x-2 p-2 rounded-md hover:bg-gray-100"
               >
-                <img src={user.profilePic} alt="Profile" className="h-8 w-8 rounded-full border" />
+                <img src={user.profileImage} alt="Profile" className="h-8 w-8 rounded-full border" />
                 <span className="text-sm font-medium">{user.name}</span>
                 <ChevronDown className="h-4 w-4" />
               </button>

@@ -1,6 +1,9 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
 const verifyToken = require('../middlewares/verifyToken');
 const User = require('../models/User');
 const router = express.Router();
@@ -40,6 +43,7 @@ router.post('/login', async (req, res) => {
         city:user.city,
         zip:user.zip,
         kitchenName:user.kitchenName,
+        profileImage: user.profileImage,
       },
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
@@ -80,5 +84,62 @@ router.post("/register", async (req, res) => {
       res.status(500).json({ error: "Error registering user" });
     }
   });
+  const uploadDir = path.join(__dirname, '../uploads');
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+  
+  const storage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, uploadDir), // Use the absolute path
+    filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname)),
+  });
+  
+  const upload = multer({ storage });
+
+  router.post("/update-profile", upload.single("profileImage"), async (req, res) => {
+    try {
+        console.log("Uploaded file:", req.file); // Debugging line
+        if (!req.file) {
+            return res.status(400).json({ message: "No file uploaded!" });
+        }
+
+        const { email, name, phone, location } = req.body;
+        const imageUrl = `http://localhost:5000/uploads/${req.file.filename}`;
+
+        const user = await User.findOneAndUpdate(
+            { email },
+            { $set: { name, phone, location, profileImage: imageUrl } },
+            { new: true }
+        );
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        res.json({ message: "Profile updated successfully!", imageUrl, user });
+    } catch (error) {
+        console.error("Error updating profile:", error);
+        res.status(500).json({ message: "Server error. Please try again." });
+    }
+});
+
+
+router.get("/get-image/:email", async (req, res) => {
+    const { email } = req.params;
+  
+    try {
+      const user = await User.findOne({ email });
+  
+      if (!user) {
+        return res.status(404).send("Image not found");
+      }
+  
+      res.redirect(`${user.profileImage}`);
+    } catch (error) {
+      res.status(500).send("Server error");
+    }
+  });
+  
+
 
 module.exports = router;

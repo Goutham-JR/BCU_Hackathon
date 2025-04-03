@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { stringify } = require('querystring');
 
 const UserSchema = new mongoose.Schema({
   userType: String,
@@ -9,7 +10,8 @@ const UserSchema = new mongoose.Schema({
   address: String,
   city: String,
   zip: String,
-  kitchenName: String
+  kitchenName: String,
+  profileImage : String
 }, {
   timestamps: true
 });
