@@ -83,27 +83,44 @@ export default function AboutUs() {
                 name: "Nagananda P",
                 role: "Executive Director",
                 bio: "With over 15 years in nonprofit management, Maria leads our organization with passion and vision.",
+                image: "https://media.licdn.com/dms/image/v2/D5603AQH8ByKbMeepNA/profile-displayphoto-shrink_800_800/B56ZWBLOznHoAg-/0/1741628961331?e=1749081600&v=beta&t=ATO49AXca6D2l1Mt4tE2H_rrTK6YrfYfxdciwXNddH8"
               },
               {
                 name: "Goutham JR",
                 role: "Head Chef",
                 bio: "A culinary expert with a background in fine dining who now uses his talents to create nutritious community meals.",
+                image: "https://media.licdn.com/dms/image/v2/D4E03AQExcEwRQqe26A/profile-displayphoto-shrink_800_800/B4EZWCypy4G0Ac-/0/1741656072543?e=1749081600&v=beta&t=rg76vS8vaW0JBYefEIiFbf1inKfn1VC0nYsV6ULDX5Q"
               },
               {
                 name: "Kiran M",
                 role: "Volunteer Coordinator",
                 bio: "Dedicated to building our volunteer program and ensuring everyone has a meaningful experience.",
+                image: "https://media.licdn.com/dms/image/v2/D5603AQEMLElo7TXatQ/profile-displayphoto-shrink_800_800/profile-displayphoto-shrink_800_800/0/1685795640081?e=1749081600&v=beta&t=Ya93KkaOGeCYBF4yq2GKZukUW8_g8HyMPDD5mUWGW7Y"
               },
               {
                 name: "Chandan Jain HP",
                 role: "Executive Director",
                 bio: "With over 15 years in nonprofit management, Maria leads our organization with passion and vision.",
+                image: "https://media.licdn.com/dms/image/v2/D4D35AQEqPD7HPZVG4w/profile-framedphoto-shrink_800_800/profile-framedphoto-shrink_800_800/0/1739345621713?e=1744322400&v=beta&t=s7pBmM89s7ObyaQDCZvq9vPfQyn9RISxJQEE5bH--lQ"
               },
+              {
+                name: "Dr Chethan Venkatesh",
+                role: "Community Outreach",
+                bio: "Passionate about connecting with the community and ensuring everyone knows about our services.",
+                image: "https://media.licdn.com/dms/image/v2/D5603AQFzjgO2Gs5adA/profile-displayphoto-shrink_800_800/B56ZXB2wDZHQAc-/0/1742714110834?e=1749081600&v=beta&t=Vbh6xpKhRB4ICjO_PWsyjCY_4Sf2Bwt7kWdGmcPDNek"
+              },
+              {
+                name: "Keerthan K",
+                role: "Marketing Manager",
+                bio: "Responsible for spreading the word about our mission and engaging the community through social media.",
+                image: "https://media.licdn.com/dms/image/v2/D5603AQE_yRlC6cIwEA/profile-displayphoto-shrink_800_800/profile-displayphoto-shrink_800_800/0/1721572683582?e=1749081600&v=beta&t=0xpENj5RiuAS2mxRn7yQegUq8njhAna8O5qjw5yI1CU"
+              },
+          
             ].map((member, index) => (
               <div key={index} className="bg-black p-6 rounded-lg">
                 <div className="w-24 h-24 bg-purple-200 rounded-full mx-auto mb-4 overflow-hidden">
                   <Image
-                    src={`https://static.vecteezy.com/system/resources/thumbnails/036/324/708/small/ai-generated-picture-of-a-tiger-walking-in-the-forest-photo.jpg? height=200&width=200&text=${member.name.charAt(0)}`}
+                    src={member.image || "https://via.placeholder.com/200"}
                     alt={member.name}
                     width={200}
                     height={200}
