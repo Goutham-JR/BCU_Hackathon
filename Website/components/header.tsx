@@ -139,7 +139,7 @@ export default function Header() {
       {/* Mobile Navigation */}
       {isOpen && (
         <div className="fixed inset-0 top-16 z-50 bg-white md:hidden">
-          <nav className="container mx-auto px-4 py-6 flex flex-col space-y-4">
+          <nav className="container mx-auto bg-white px-4 py-6 flex flex-col space-y-4">
             {navItems.map((item) => (
               <Link
                 key={item.href}

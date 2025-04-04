@@ -1,30 +1,25 @@
-// pages/profile.js
 'use client'
-import Head from 'next/head';
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 export default function Profile() {
   const [activeSection, setActiveSection] = useState('profile');  
-  const [user, setUser] = useState({})
+  const [user, setUser] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    profileImage: '',
+    profileImageFile: null
+  });
 
-  useEffect(() => {
-      async function checkAuth() {
-        try {
-          const response = await fetch("http://localhost:5000/api/auth/check-auth", { credentials: "include",  })
-          const data = await response.json();
-  
-          if (response.ok) {
-            setUser(data.user)
-          } else {
-            setUser(null)
-          }
-        } catch (error) {
-          console.error("Auth check failed", error)
-          setUser(null)
-        }
-      }
-      checkAuth()
-    }, [])
+  const [errors, setErrors] = useState({
+    firstName: '',
+    lastName: '',
+    phone: '',
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
 
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -32,53 +27,134 @@ export default function Profile() {
     confirmPassword: ''
   });
 
-  const handleProfileUpdate = async (e) => {
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+
+  // Validation functions
+  const validateName = (name: string) => /^[A-Za-z]+$/.test(name);
+  const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const validatePhone = (phone: string) => /^[6-9]\d{9}$/.test(phone);
+  const validatePassword = (password: string) => password.length >= 6;
+
+  useEffect(() => {
+    async function checkAuth() {
+      try {
+        const response = await fetch("http://localhost:5000/api/auth/check-auth", { 
+          credentials: "include"  
+        });
+        const data = await response.json();
+
+        if (response.ok) {
+          setUser({
+            ...data.user,
+            name: data.user.name || '',
+            email: data.user.email || '',
+            phone: data.user.phone || '',
+            profileImage: data.user.profileImage || ''
+          });
+        } else {
+          window.location.href = '/login';
+        }
+      } catch (error) {
+        console.error("Auth check failed", error);
+        window.location.href = '/login';
+      }
+    }
+    checkAuth();
+  }, []);
+
+  const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-  
+
+    // Validate profile fields
+    const nameParts = user.name.split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts[1] || '';
+    
+    const newErrors = {
+      firstName: validateName(firstName) ? '' : 'First name must contain only letters',
+      lastName: validateName(lastName) ? '' : 'Last name must contain only letters',
+      phone: validatePhone(user.phone) ? '' : 'Please enter a valid 10-digit phone number',
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    };
+
+    setErrors(newErrors);
+
+    if (Object.values(newErrors).some(error => error !== '')) {
+      toast.error('Please fix the errors in the form');
+      return;
+    }
+
     const formData = new FormData();
-    formData.append("email", user.email);  // Send email to identify user
+    formData.append("email", user.email);
     formData.append("name", user.name);
     formData.append("phone", user.phone);
     
     if (user.profileImageFile) {
       formData.append("profileImage", user.profileImageFile);
     }
-  
+
     try {
       const response = await fetch("http://localhost:5000/api/auth/update-profile", {
         method: "POST",
         body: formData,
         credentials: "include",
       });
-  
+
       const data = await response.json();
-  
+
       if (response.ok) {
-        alert("Profile updated successfully!");
-        setUser((prev) => ({ 
+        toast.success("Profile updated successfully!");
+        setUser(prev => ({ 
           ...prev, 
           profileImage: data.imageUrl || prev.profileImage,
         }));
       } else {
-        alert(data.message || "Profile update failed.");
+        toast.error(data.message || "Profile update failed.");
       }
     } catch (error) {
-      console.error("Error updating profile:", error);
-      alert("Something went wrong. Please try again.");
+      console.log("Error updating profile:", error);
+      toast.error("Failed to update profile. Please try again.");
     }
   };
-  
 
-  const handlePasswordUpdate = async (e) => {
+  const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-  
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      alert("New password and confirm password do not match.");
+    setIsUpdatingPassword(true);
+
+    // Clear previous errors
+    setErrors(prev => ({
+      ...prev,
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    }));
+
+    // Validate inputs
+    let isValid = true;
+    const newErrors = {
+      ...errors,
+      currentPassword: !passwordData.currentPassword ? 'Current password is required' : '',
+      newPassword: !validatePassword(passwordData.newPassword) ? 'Password must be at least 6 characters' : '',
+      confirmPassword: passwordData.newPassword !== passwordData.confirmPassword ? 'Passwords do not match' : ''
+    };
+
+    if (passwordData.currentPassword && passwordData.currentPassword === passwordData.newPassword) {
+      newErrors.newPassword = 'New password must be different from current password';
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+
+    if (Object.values(newErrors).some(error => error !== '') || !isValid) {
+      toast.error('Please fix the errors in the form');
+      setIsUpdatingPassword(false);
       return;
     }
-  
+
     try {
-      const response = await fetch("http://localhost:5000/api/user/change-password", {
+      const response = await fetch("http://localhost:5000/api/auth/update-password", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -89,42 +165,50 @@ export default function Profile() {
           newPassword: passwordData.newPassword
         })
       });
-  
+
       const data = await response.json();
-  
+
       if (response.ok) {
-        alert("Password updated successfully!");
+        toast.success("Password updated successfully!");
         setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
       } else {
-        alert(data.message || "Failed to update password.");
+        toast.error(data.message || "Failed to update password.");
+        // Handle specific backend errors
+        if (data.message.includes('Current password is incorrect')) {
+          setErrors(prev => ({ ...prev, currentPassword: 'Current password is incorrect' }));
+        }
       }
     } catch (error) {
       console.error("Error updating password:", error);
-      alert("Something went wrong. Please try again.");
+      toast.error("Network error. Please try again later.");
+    } finally {
+      setIsUpdatingPassword(false);
     }
   };
-  
 
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (file) {
-        setUser((prev) => ({ ...prev, profileImageFile: file })); // Store file for FormData
+        setUser(prev => ({ ...prev, profileImageFile: file }));
         const reader = new FileReader();
         reader.onloadend = () => {
-            setUser((prev) => ({ ...prev, profileImage: reader.result }));
+            setUser(prev => ({ ...prev, profileImage: reader.result as string }));
         };
         reader.readAsDataURL(file);
     }
-};
+  };
 
+  const handleNameChange = (part: 'first' | 'last', value: string) => {
+    const nameParts = user.name.split(' ');
+    if (part === 'first') {
+      setUser({ ...user, name: `${value} ${nameParts[1] || ''}`.trim() });
+    } else {
+      setUser({ ...user, name: `${nameParts[0] || ''} ${value}`.trim() });
+    }
+  };
 
   return (
     <div className="flex flex-col md:flex-row bg-gray-100 min-h-screen">
-      <Head>
-        <title>User Profile</title>
-        <script src="https://cdn.tailwindcss.com"></script>
-      </Head>
-
       {/* Sidebar */}
       <aside className="w-full md:w-64 px-4 py-8 bg-purple-900 border-r">
         <div className="flex flex-col items-center mt-6">
@@ -160,7 +244,13 @@ export default function Profile() {
           >
             Profile
           </button>
-          <button className="w-full px-4 py-2 text-white hover:bg-purple-700 rounded-lg">
+          <button 
+            className="w-full px-4 py-2 text-white hover:bg-purple-700 rounded-lg"
+            onClick={() => {
+              document.cookie = 'token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+              window.location.href = '/login';
+            }}
+          >
             Logout
           </button>
         </nav>
@@ -178,19 +268,21 @@ export default function Profile() {
                   <label className="block text-purple-700 font-bold">First Name</label>
                   <input
                     type="text"
-                    value={user.name?.split(' ')[0]}
-                    onChange={(e) => setUser({ ...user, name: `${e.target.value} ${user.name.split(' ')[1]}` })}
+                    value={user.name.split(' ')[0] || ''}
+                    onChange={(e) => handleNameChange('first', e.target.value)}
                     className="w-full px-4 py-2 mt-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   />
+                  {errors.firstName && <p className="text-xs text-red-500 mt-1">{errors.firstName}</p>}
                 </div>
                 <div>
                   <label className="block text-purple-700 font-bold">Last Name</label>
                   <input
                     type="text"
-                    value={user.name?.split(' ')[1]}
-                    onChange={(e) => setUser({ ...user, name: `${user.name.split(' ')[0]} ${e.target.value}` })}
+                    value={user.name.split(' ')[1] || ''}
+                    onChange={(e) => handleNameChange('last', e.target.value)}
                     className="w-full px-4 py-2 mt-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   />
+                  {errors.lastName && <p className="text-xs text-red-500 mt-1">{errors.lastName}</p>}
                 </div>
                 <div>
                   <label className="block text-purple-700 font-bold">Email</label>
@@ -208,61 +300,81 @@ export default function Profile() {
                     value={user.phone}
                     onChange={(e) => setUser({ ...user, phone: e.target.value })}
                     className="w-full px-4 py-2 mt-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    maxLength={10}
                   />
+                  {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
                 </div>
-                
               </div>
               <div className="flex justify-center">
-  <button
-    type="submit"
-    className="px-6 py-2 bg-purple-700 hover:bg-purple-500 text-white rounded-lg transition-colors"
-  >
-    Update Profile
-  </button>
-</div>
-</form>
-              {/* Password Update Card */}
-              <div className="border-t pt-6">
-                <h3 className="text-xl font-bold text-purple-700 mb-4">Change Password</h3>
-                <form onSubmit={handlePasswordUpdate} className="space-y-4">
-                  <div>
-                    <label className="block text-purple-700 font-bold">Current Password</label>
-                    <input
-                      type="password"
-                      value={passwordData.currentPassword}
-                      onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                      className="w-full px-4 py-2 mt-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-purple-700 font-bold">New Password</label>
-                    <input
-                      type="password"
-                      value={passwordData.newPassword}
-                      onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                      className="w-full px-4 py-2 mt-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-purple-700 font-bold">Confirm New Password</label>
-                    <input
-                      type="password"
-                      value={passwordData.confirmPassword}
-                      onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                      className="w-full px-4 py-2 mt-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div className="flex justify-center">
+                <button
+                  type="submit"
+                  className="px-6 py-2 bg-purple-700 hover:bg-purple-500 text-white rounded-lg transition-colors"
+                >
+                  Update Profile
+                </button>
+              </div>
+            </form>
+
+            {/* Password Update Card */}
+            <div className="border-t pt-6">
+              <h3 className="text-xl font-bold text-purple-700 mb-4">Change Password</h3>
+              <form onSubmit={handlePasswordUpdate} className="space-y-4">
+                <div>
+                  <label className="block text-purple-700 font-bold">Current Password</label>
+                  <input
+                    type="password"
+                    name="cpassword"
+                    value={passwordData.currentPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                    className="w-full px-4 py-2 mt-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="Enter current password"
+                  />
+                  {errors.currentPassword && <p className="text-xs text-red-500 mt-1">{errors.currentPassword}</p>}
+                </div>
+                <div>
+                  <label className="block text-purple-700 font-bold">New Password</label>
+                  <input
+                    type="password"
+                    name="npassword"
+                    value={passwordData.newPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                    className="w-full px-4 py-2 mt-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="At least 6 characters"
+                  />
+                  {errors.newPassword && <p className="text-xs text-red-500 mt-1">{errors.newPassword}</p>}
+                </div>
+                <div>
+                  <label className="block text-purple-700 font-bold">Confirm New Password</label>
+                  <input
+                    type="password"
+                    value={passwordData.confirmPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                    className="w-full px-4 py-2 mt-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="Re-enter new password"
+                  />
+                  {errors.confirmPassword && <p className="text-xs text-red-500 mt-1">{errors.confirmPassword}</p>}
+                </div>
+                <div className="flex justify-center">
                   <button
                     type="submit"
                     className="px-6 py-2 bg-purple-700 hover:bg-purple-500 text-white rounded-lg transition-colors"
+                    disabled={isUpdatingPassword}
                   >
-                    Update Password
+                    {isUpdatingPassword ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Updating...
+                      </>
+                    ) : (
+                      'Update Password'
+                    )}
                   </button>
-                  </div>
-                </form>
-              </div>            
-            
+                </div>
+              </form>
+            </div>            
           </section>
         )}
       </main>

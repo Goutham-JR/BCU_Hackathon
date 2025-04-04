@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import Link from "next/link"
 import { motion } from "framer-motion"
@@ -11,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { toast } from "sonner"
 
 export default function RegisterPage() {
   const [step, setStep] = useState(1)
@@ -26,47 +26,155 @@ export default function RegisterPage() {
     city: "",
     zip: "",
     kitchenName: "",
-  });
+  })
 
-  // Handle Input Changes
+  const [errors, setErrors] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    password: "",
+    address: "",
+    city: "",
+    zip: "",
+    kitchenName: ""
+  })
+
+  // Validation functions
+  const validateName = (name: string) => /^[A-Za-z\s]+$/.test(name)
+  const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  const validatePhone = (phone: string) => /^[6-9]\d{9}$/.test(phone)
+  const validatePassword = (password: string) => password.length >= 6
+  const validateAddress = (address: string) => address.trim().length > 0
+  const validateCity = (city: string) => /^[A-Za-z\s]+$/.test(city)
+  const validateZip = (zip: string) => /^\d{6}$/.test(zip)
+  const validateKitchenName = (name: string) => name.trim().length > 0
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+    const { name, value } = e.target
+    setFormData({ ...formData, [name]: value })
 
+    switch (name) {
+      case "name":
+        setErrors({
+          ...errors,
+          name: validateName(value) ? "" : "Name should contain only letters"
+        })
+        break
+      case "email":
+        setErrors({
+          ...errors,
+          email: validateEmail(value) ? "" : "Please enter a valid email"
+        })
+        break
+      case "phone":
+        setErrors({
+          ...errors,
+          phone: validatePhone(value) ? "" : "Please enter a valid 10-digit Indian phone number"
+        })
+        break
+      case "password":
+        setErrors({
+          ...errors,
+          password: validatePassword(value) ? "" : "Password must be at least 6 characters"
+        })
+        break
+      case "address":
+        setErrors({
+          ...errors,
+          address: validateAddress(value) ? "" : "Street address is required"
+        })
+        break
+      case "city":
+        setErrors({
+          ...errors,
+          city: validateCity(value) ? "" : "City should contain only letters"
+        })
+        break
+      case "zip":
+        setErrors({
+          ...errors,
+          zip: validateZip(value) ? "" : "ZIP code must be 6 digits"
+        })
+        break
+      case "kitchenName":
+        setErrors({
+          ...errors,
+          kitchenName: validateKitchenName(value) ? "" : "Kitchen name is required"
+        })
+        break
+      default:
+        break
+    }
+  }
+
+  const validateStep = (step: number) => {
+    if (step === 2) {
+      const isValid = 
+        validateName(formData.name) &&
+        validateEmail(formData.email) &&
+        validatePhone(formData.phone) &&
+        validatePassword(formData.password)
+      
+      if (!isValid) {
+        toast.error("Please enter the required details")
+        return false
+      }
+    } else if (step === 3) {
+      const isValid = 
+        validateAddress(formData.address) &&
+        validateCity(formData.city) &&
+        validateZip(formData.zip) &&
+        (userType !== "kitchen" || validateKitchenName(formData.kitchenName))
+      
+      if (!isValid) {
+        toast.error("Please enter the required details")
+        return false
+      }
+    }
+    return true
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+    e.preventDefault()
+    setIsLoading(true)
   
     const userData = {
       userType,
       ...formData,
       kitchenName: userType === "kitchen" ? formData.kitchenName : "",
-    };
+    }
   
     try {
       const response = await fetch("http://localhost:5000/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(userData),
-      });
+      })
+
+      if (response.status === 401) {
+        toast.error("User already exists with this email");
+      } 
   
       if (response.ok) {
-        alert("Registration successful!");
-        window.location.href = "/login";
+        toast.success("Registration successful!")
+        window.location.href = "/login"
       } else {
-        alert("Registration failed. Try again.");
+        toast.error("User already exists with this email")
       }
     } catch (error) {
-      console.error("Error registering user:", error);
-      alert("An error occurred. Please try again.");
+      console.error("Error registering user:", error)
+      toast.error("An error occurred. Please try again.")
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
   
+  const nextStep = () => {
+    if (validateStep(step)) {
+      setStep(step + 1)
+    }
+  }
 
-  const nextStep = () => setStep(step + 1)
   const prevStep = () => setStep(step - 1)
 
   return (
@@ -166,24 +274,59 @@ export default function RegisterPage() {
                 >
                   <div className="space-y-2">
                     <Label htmlFor="name">Full Name</Label>
-                    <Input id="name" name="name" placeholder="Enter your full name"  value={formData.name} onChange={handleChange} required />
+                    <Input 
+                      id="name" 
+                      name="name" 
+                      placeholder="Enter your full name"  
+                      value={formData.name} 
+                      onChange={handleChange} 
+                      required 
+                    />
+                    {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="email">Email Address</Label>
-                    <Input id="email" name="email" type="email" placeholder="you@example.com" value={formData.email} onChange={handleChange} required />
+                    <Input 
+                      id="email" 
+                      name="email" 
+                      type="email" 
+                      placeholder="you@example.com" 
+                      value={formData.email} 
+                      onChange={handleChange} 
+                      required 
+                    />
+                    {errors.email && <p className="text-xs text-red-500">{errors.email}</p>}
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="phone">Phone Number</Label>
-                    <Input id="phone" name="phone" type="tel" placeholder="(123) 456-7890" value={formData.phone} onChange={handleChange} required />
+                    <Input 
+                      id="phone" 
+                      name="phone" 
+                      type="tel" 
+                      placeholder="98XXXXXXXX" 
+                      value={formData.phone} 
+                      onChange={handleChange} 
+                      required 
+                    />
+                    {errors.phone && <p className="text-xs text-red-500">{errors.phone}</p>}
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>
-                    <Input id="password" name="password" type="password" placeholder="Create a password" value={formData.password} onChange={handleChange} required />
+                    <Input 
+                      id="password" 
+                      name="password" 
+                      type="password" 
+                      placeholder="Create a password" 
+                      value={formData.password} 
+                      onChange={handleChange} 
+                      required 
+                    />
+                    {errors.password && <p className="text-xs text-red-500">{errors.password}</p>}
                     <p className="text-xs text-gray-500">
-                      Must be at least 8 characters with a number and special character
+                      Must be at least 6 characters
                     </p>
                   </div>
 
@@ -208,24 +351,57 @@ export default function RegisterPage() {
                 >
                   <div className="space-y-2">
                     <Label htmlFor="address">Street Address</Label>
-                    <Input id="address" name="address" placeholder="123 Main St" value={formData.address} onChange={handleChange} required />
+                    <Input 
+                      id="address" 
+                      name="address" 
+                      placeholder="123 Main St" 
+                      value={formData.address} 
+                      onChange={handleChange} 
+                      required 
+                    />
+                    {errors.address && <p className="text-xs text-red-500">{errors.address}</p>}
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="city">City</Label>
-                      <Input id="city" name="city" placeholder="City" value={formData.city} onChange={handleChange} required />
+                      <Input 
+                        id="city" 
+                        name="city" 
+                        placeholder="City" 
+                        value={formData.city} 
+                        onChange={handleChange} 
+                        required 
+                      />
+                      {errors.city && <p className="text-xs text-red-500">{errors.city}</p>}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="zip">ZIP Code</Label>
-                      <Input id="zip" name="zip" placeholder="ZIP" value={formData.zip} onChange={handleChange} required />
+                      <Input 
+                        id="zip" 
+                        name="zip" 
+                        placeholder="6-digit ZIP" 
+                        value={formData.zip} 
+                        onChange={handleChange} 
+                        required 
+                        maxLength={6}
+                      />
+                      {errors.zip && <p className="text-xs text-red-500">{errors.zip}</p>}
                     </div>
                   </div>
 
                   {userType === "kitchen" && (
                     <div className="space-y-2">
-                      <Label htmlFor="kitchen-name">Kitchen Name</Label>
-                      <Input id="kitchen-name" placeholder="Name of your community kitchen" required />
+                      <Label htmlFor="kitchenName">Kitchen Name</Label>
+                      <Input 
+                        id="kitchenName" 
+                        name="kitchenName" 
+                        placeholder="Name of your community kitchen" 
+                        value={formData.kitchenName} 
+                        onChange={handleChange} 
+                        required={userType === "kitchen"}
+                      />
+                      {errors.kitchenName && <p className="text-xs text-red-500">{errors.kitchenName}</p>}
                     </div>
                   )}
 
@@ -279,4 +455,3 @@ export default function RegisterPage() {
     </div>
   )
 }
-

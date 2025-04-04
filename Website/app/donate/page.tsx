@@ -12,6 +12,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Slider } from "@/components/ui/slider"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { toast } from "sonner"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,101 +25,124 @@ import {
 
 export default function DonatePage() {
   const [isLoading, setIsLoading] = useState(false)
-  const [foodType, setFoodType] = useState("veg")
+  const [foodType, setFoodType] = useState("")
   const [quantity, setQuantity] = useState(1)
-  const [images, setImages] = useState([])
+  const [images, setImages] = useState<string[]>([])
   const [showSuccess, setShowSuccess] = useState(false)
   const [maxQuantity, setMaxQuantity] = useState(20)
-  const [location, setLocation] = useState<{ lat: number, lng: number } | null>(null)
+  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [preparationTime, setPreparationTime] = useState('today');
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isConfirmed, setIsConfirmed] = useState(true);
-  const [confirmationError, setConfirmationError] = useState("");
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [preparationTime, setPreparationTime] = useState('')
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [isConfirmed, setIsConfirmed] = useState(false)
+  const [errors, setErrors] = useState({
+    title: '',
+    description: '',
+    foodType: '',
+    preparationTime: '',
+    quantity: '',
+    location: '',
+    confirmation: ''
+  })
 
- 
+  // Validation functions
+  const validateTitle = (title: string) => /^[A-Za-z\s]+$/.test(title)
+  const validateDescription = (desc: string) => desc.length >= 10 && /^[A-Za-z\s.,!?]+$/.test(desc)
+  const validateQuantity = (qty: number) => qty >= 5
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
 
-    if (!isConfirmed) {
-      setConfirmationError("You must confirm the food safety statement");
-      return;
+    // Validate all fields
+    const newErrors = {
+      title: validateTitle(title) ? '' : 'Title must contain only letters and spaces',
+      description: validateDescription(description) ? '' : 'Description must be at least 10 characters with only letters and basic punctuation',
+      foodType: foodType ? '' : 'Please select a food type',
+      preparationTime: preparationTime ? '' : 'Please select preparation time',
+      quantity: validateQuantity(quantity) ? '' : 'Quantity must be at least 5 servings',
+      location: location ? '' : 'Please select pickup location',
+      confirmation: isConfirmed ? '' : 'You must confirm the food safety statement'
     }
 
-    setIsLoading(true);
-    setErrorMessage("");
+    setErrors(newErrors)
+
+    // Check if any errors exist
+    if (Object.values(newErrors).some(error => error !== '')) {
+      toast.error('Please fill all the fields')
+      return
+    }
+
+    setIsLoading(true)
+    setErrorMessage("")
 
     // Using FormData for file uploads
-    const formData = new FormData();
-    formData.append("title", title);
-    formData.append("description", description);
-    formData.append("foodType", foodType);
-    formData.append("preparationTime", preparationTime);
-    formData.append("quantity", quantity);
-    formData.append("location", location); // Ensure location is a string or JSON.stringify(location)
-    formData.append("donorId", "current-user-id"); // Replace with real user ID
-    formData.append("status", "available");
+    const formData = new FormData()
+    formData.append("title", title)
+    formData.append("description", description)
+    formData.append("foodType", foodType)
+    formData.append("preparationTime", preparationTime)
+    formData.append("quantity", quantity.toString())
+    formData.append("location", JSON.stringify(location))
+    formData.append("donorId", "current-user-id") // Replace with real user ID
+    formData.append("status", "available")
 
-    for (let [key, value] of formData.entries()) {
-      console.log(`${key}:`, value);
+    // Append each image file
+    if (fileInputRef.current?.files) {
+      Array.from(fileInputRef.current.files).forEach(file => {
+        formData.append("images", file)
+      })
+    }
+
+    try {
+      const response = await fetch("http://localhost:5000/api/donate/donation", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: formData,
+        credentials: "include",
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to post donation")
+      }
+
+      toast.success("Donation posted successfully!")
+      setShowSuccess(true)
+    } catch (error) {
+      console.error("Donation submission error:", error)
+      toast.error(error.message || "Something went wrong. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
   }
-
-    // try {
-    //   const response = await fetch("http://localhost:5000/api/donate/donation", {
-    //     method: "POST",
-    //     headers: {
-    //       Authorization: `Bearer ${localStorage.getItem("token")}`, // No 'Content-Type' for FormData
-    //     },
-    //     body: formData,
-    //     credentials: "include",
-    //   });
-
-    //   const data = await response.json();
-
-    //   if (!response.ok) {
-    //     setErrorMessage(data.message || "Failed to post donation");
-    //     return;
-    //   }
-
-    //   console.log("Donation posted successfully", data);
-    //   setShowSuccess(true);
-
-
-    //   setIsConfirmed(false);
-    // } catch (error) {
-    //   setErrorMessage("Network error. Please try again later.");
-    //   console.error("Donation submission error:", error);
-    // } finally {
-    //   setIsLoading(false);
-    // }
-  };
 
   const handleImageUpload = () => {
     fileInputRef.current?.click()
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+    const files = e.target.files
+    if (!files || files.length === 0) return
   
     const newImages = Array.from(files)
       .slice(0, 5 - images.length)
       .map(file => {
         if (!file.type.startsWith('image/')) {
-          alert('Please upload only image files');
-          return null;
+          toast.error('Please upload only image files')
+          return null
         }
-        return URL.createObjectURL(file);
+        return URL.createObjectURL(file)
       })
-      .filter(img => img !== null) as string[];
+      .filter(img => img !== null) as string[]
   
-    setImages(prev => [...prev, ...newImages]);
-  };
-  
+    setImages(prev => [...prev, ...newImages])
+  }
 
   const getCurrentLocation = () => {
     setIsLoading(true)
@@ -136,6 +160,7 @@ export default function DonatePage() {
           lat: position.coords.latitude,
           lng: position.coords.longitude
         })
+        setErrors(prev => ({ ...prev, location: '' }))
         setIsLoading(false)
       },
       (err) => {
@@ -168,14 +193,25 @@ export default function DonatePage() {
           </CardHeader>
 
           <CardContent className="pt-6">
-          {errorMessage && (
+            {errorMessage && (
               <p className="text-sm text-red-600 py-2">{errorMessage}</p>
             )}
-            <form onSubmit={handleSubmit} className="space-y-6" >
+            <form onSubmit={handleSubmit} className="space-y-6">
               {/* Food Title */}
               <div className="space-y-2">
                 <Label htmlFor="title">Food Title</Label>
-                <Input id="title" name="title" placeholder="E.g., Homemade Vegetable Curry" value={title} onValueChange={setTitle} required />
+                <Input 
+                  id="title" 
+                  name="title" 
+                  placeholder="E.g., Homemade Vegetable Curry" 
+                  value={title} 
+                  onChange={(e) => {
+                    setTitle(e.target.value)
+                    setErrors(prev => ({ ...prev, title: '' }))
+                  }} 
+                  required 
+                />
+                {errors.title && <p className="text-xs text-red-500 mt-1">{errors.title}</p>}
               </div>
 
               {/* Description */}
@@ -186,16 +222,28 @@ export default function DonatePage() {
                   name="description"
                   placeholder="Describe the food, quantity, and any other relevant details..."
                   rows={4}
-                  value={description} onValueChange={setDescription}
+                  value={description}
+                  onChange={(e) => {
+                    setDescription(e.target.value)
+                    setErrors(prev => ({ ...prev, description: '' }))
+                  }}
                   required
                 />
+                {errors.description && <p className="text-xs text-red-500 mt-1">{errors.description}</p>}
               </div>
 
               {/* Food Type and Preparation Time */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label>Food Type</Label>
-                  <RadioGroup value={foodType} onValueChange={setFoodType} className="flex space-x-4">
+                  <RadioGroup 
+                    value={foodType} 
+                    onValueChange={(value) => {
+                      setFoodType(value)
+                      setErrors(prev => ({ ...prev, foodType: '' }))
+                    }} 
+                    className="grid grid-cols-2 gap-4"
+                  >
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="veg" id="veg" />
                       <Label htmlFor="veg" className="flex items-center">
@@ -210,12 +258,37 @@ export default function DonatePage() {
                         Non-Vegetarian
                       </Label>
                     </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="vegetables" id="vegetables" />
+                      <Label htmlFor="vegetables" className="flex items-center">
+                        <svg className="h-4 w-4 mr-1 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                        </svg>
+                        Vegetables
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="fruits" id="fruits" />
+                      <Label htmlFor="fruits" className="flex items-center">
+                        <svg className="h-4 w-4 mr-1 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Fruits
+                      </Label>
+                    </div>
                   </RadioGroup>
+                  {errors.foodType && <p className="text-xs text-red-500 mt-1">{errors.foodType}</p>}
                 </div>
 
                 <div className="space-y-2">
                   <Label>Preparation Time</Label>
-                  <Select defaultValue="today">
+                  <Select 
+                    value={preparationTime}
+                    onValueChange={(value) => {
+                      setPreparationTime(value)
+                      setErrors(prev => ({ ...prev, preparationTime: '' }))
+                    }}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select when it was prepared" />
                     </SelectTrigger>
@@ -226,6 +299,7 @@ export default function DonatePage() {
                       <SelectItem value="older">Older</SelectItem>
                     </SelectContent>
                   </Select>
+                  {errors.preparationTime && <p className="text-xs text-red-500 mt-1">{errors.preparationTime}</p>}
                 </div>
               </div>
 
@@ -241,6 +315,7 @@ export default function DonatePage() {
                     onValueChange={(value) => {
                       const newValue = value[0]
                       setQuantity(newValue)
+                      setErrors(prev => ({ ...prev, quantity: '' }))
                       if (newValue >= maxQuantity - 5) {
                         setMaxQuantity(maxQuantity + 10)
                       }
@@ -249,6 +324,7 @@ export default function DonatePage() {
                   />
                   <span className="w-12 text-center font-medium">{quantity}</span>
                 </div>
+                {errors.quantity && <p className="text-xs text-red-500">{errors.quantity}</p>}
               </div>
 
               {/* Location Picker */}
@@ -281,6 +357,7 @@ export default function DonatePage() {
                 {error && (
                   <p className="text-sm text-red-600">{error}</p>
                 )}
+                {errors.location && <p className="text-sm text-red-600">{errors.location}</p>}
                 <p className="text-xs text-gray-500">
                   For safety, your exact coordinates will only be shared when you approve a request
                 </p>
@@ -340,13 +417,18 @@ export default function DonatePage() {
                 <Label className="flex items-start gap-2">
                   <Input 
                     type="checkbox" 
-                    className="mt-0.5"  // Small vertical adjustment
-                    required 
+                    className="mt-0.5"
+                    checked={isConfirmed}
+                    onChange={(e) => {
+                      setIsConfirmed(e.target.checked)
+                      setErrors(prev => ({ ...prev, confirmation: '' }))
+                    }}
                   />
                   <span className="text-sm text-gray-600">
                     I confirm that this food is safe for consumption and I have followed proper food handling practices.
                   </span>
                 </Label>
+                {errors.confirmation && <p className="text-xs text-red-500">{errors.confirmation}</p>}
               </div>
 
               {/* Submit Button */}

@@ -7,6 +7,8 @@ const fs = require("fs");
 const verifyToken = require('../middlewares/verifyToken');
 const User = require('../models/User');
 const router = express.Router();
+const nodemailer = require('nodemailer');
+const crypto = require('crypto');
 
 router.get('/check-auth', verifyToken, (req, res) => {
   res.status(200).json({ user: req.user });
@@ -79,6 +81,10 @@ router.post("/register", async (req, res) => {
       const user = new User(req.body);
       await user.save();
       res.status(201).json({ message: "User registered successfully" });
+      const checkuser = await User.findOne({ email: req.body.email.toLowerCase() });
+      if (checkuser) {
+        return res.status(401).json({ message: 'User already registered' });
+      }
     } catch (error) {
         console.log(error)
       res.status(500).json({ error: "Error registering user" });
@@ -139,7 +145,295 @@ router.get("/get-image/:email", async (req, res) => {
       res.status(500).send("Server error");
     }
   });
+
+
+
+// Validate environment variables
+const validateEnv = () => {
+  const requiredVars = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS', 'SMTP_USER'];
+  const missingVars = requiredVars.filter(varName => !process.env[varName]);
   
+  if (missingVars.length > 0) {
+    throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
+  }
+};
+
+// Initialize transporter with proper configuration
+const createTransporter = () => {
+  validateEnv();
+  
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT),
+    secure: process.env.SMTP_SECURE === 'true', // Convert string to boolean
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS
+    },
+    tls: {
+      rejectUnauthorized: process.env.NODE_ENV === 'production' // Only strict in production
+    }
+  });
+};
+
+const transporter = createTransporter();
+
+// Verify transporter connection
+transporter.verify((error) => {
+  if (error) {
+    console.error('SMTP Connection Error:', error);
+  } else {
+    console.log('SMTP Server is ready to send emails');
+  }
+});
+
+// Generate a 4-digit OTP
+const generateOTP = () => {
+  return crypto.randomInt(1000, 9999).toString();
+};
+
+// Store OTPs temporarily (in production, use Redis or database)
+const otpStore = new Map();
+
+// Forgot password - send OTP
+router.post('/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  console.log(req.body);
+
+  try {
+    // Validate email format
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Please provide a valid email address' 
+      });
+    }
+
+    // Check if user exists
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'If this email exists, we will send a reset code' 
+      });
+    }
+
+    // Generate OTP
+    const otp = generateOTP();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes expiry
+
+    // Store OTP
+    otpStore.set(email, { otp, expiresAt });
+
+    // Email content
+    const mailOptions = {
+      from: `"Your App Name" <${process.env.SMTP_FROM_EMAIL}>`,
+      to: email,
+      subject: 'Password Reset Code',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #4f46e5;">Password Reset Request</h2>
+          <p>Use this code to reset your password:</p>
+          <div style="background: #f3f4f6; padding: 16px; text-align: center; margin: 20px 0; border-radius: 8px;">
+            <h1 style="margin: 0; font-size: 32px; letter-spacing: 3px; color: #4f46e5;">${otp}</h1>
+          </div>
+          <p>This code expires in 15 minutes.</p>
+          <p style="color: #6b7280; font-size: 14px;">
+            © ${new Date().getFullYear()} Your App Name
+          </p>
+        </div>
+      `,
+    };
+
+    // Send email
+    await transporter.sendMail(mailOptions);
+
+    res.status(200).json({ 
+      success: true,
+      message: 'If this email exists, we have sent a reset code' 
+    });
+
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to process your request. Please try again later.' 
+    });
+  }
+});
+
+// Verify OTP and reset password
+router.post('/reset-password', async (req, res) => {
+  const { email, code, newPassword } = req.body;
+
+  try {
+    // Validate inputs
+    if (!email || !code || !newPassword) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Email, code and new password are required' 
+      });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Password must be at least 8 characters' 
+      });
+    }
+
+    // Check OTP validity
+    const storedOtp = otpStore.get(email);
+    if (!storedOtp) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Invalid or expired code' 
+      });
+    }
+
+    if (storedOtp.otp !== code) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Invalid code' 
+      });
+    }
+
+    if (new Date() > storedOtp.expiresAt) {
+      otpStore.delete(email);
+      return res.status(400).json({ 
+        success: false,
+        message: 'Code has expired' 
+      });
+    }
+
+    // Update user password
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'User not found' 
+      });
+    }
+
+    // In production, you should hash the password!
+    user.password = newPassword;
+    await user.save();
+
+    // Clear OTP
+    otpStore.delete(email);
+
+    // Send confirmation email
+    const mailOptions = {
+      from: `"Your App Name" <${process.env.SMTP_USER}>`,
+      to: email,
+      subject: 'Password Changed Successfully',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #4f46e5;">Password Updated</h2>
+          <p>Your password was successfully changed.</p>
+          <p>If you didn't make this change, please contact us immediately.</p>
+          <p style="color: #6b7280; font-size: 14px;">
+            © ${new Date().getFullYear()} Your App Name
+          </p>
+        </div>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    res.status(200).json({ 
+      success: true,
+      message: 'Password reset successfully' 
+    });
+
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to reset password. Please try again later.' 
+    });
+  }
+});
+
+
+router.put('/update-password', async (req, res) => {
+  // Check if user is logged in via session
+  if (!req.session.userId) {
+    return res.status(401).json({ 
+      success: false,
+      message: 'Not authenticated. Please login first.' 
+    });
+  }
+
+  const { currentPassword, newPassword, confirmPassword } = req.body;
+
+  // Validate inputs
+  if (!cPassword || !newPassword || !confirmPassword) {
+    return res.status(400).json({ 
+      success: false,
+      message: 'All password fields are required' 
+    });
+  }
+
+  if (newPassword.length < 6) {
+    return res.status(400).json({ 
+      success: false,
+      message: 'Password must be at least 6 characters' 
+    });
+  }
+
+  if (newPassword !== confirmPassword) {
+    return res.status(400).json({ 
+      success: false,
+      message: 'New passwords do not match' 
+    });
+  }
+
+  try {
+    // Find user by session ID
+    const user = await User.findById(req.session.userId);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'User not found' 
+      });
+    }
+
+    // Verify current password (plaintext comparison as in your login)
+    if (user.password !== currentPassword) {
+      return res.status(401).json({ 
+        success: false,
+        message: 'Current password is incorrect' 
+      });
+    }
+
+    // Check if new password is different
+    if (currentPassword === newPassword) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'New password must be different from current password' 
+      });
+    }
+
+    // Update password (in plaintext to match your login system)
+    user.password = newPassword;
+    await user.save();
+
+    return res.status(200).json({ 
+      success: true,
+      message: 'Password updated successfully' 
+    });
+
+  } catch (error) {
+    console.error('Password update error:', error);
+    return res.status(500).json({ 
+      success: false,
+      message: 'Internal server error. Please try again later.' 
+    });
+  }
+});
+
+
 
 
 module.exports = router;
