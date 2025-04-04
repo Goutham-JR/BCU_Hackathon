@@ -78,13 +78,14 @@ router.post('/logout', (req, res) => {
 
 router.post("/register", async (req, res) => {
     try {
+       
       const user = new User(req.body);
       await user.save();
       res.status(201).json({ message: "User registered successfully" });
       const checkuser = await User.findOne({ email: req.body.email.toLowerCase() });
       if (checkuser) {
         return res.status(401).json({ message: 'User already registered' });
-      }
+    }
     } catch (error) {
         console.log(error)
       res.status(500).json({ error: "Error registering user" });
@@ -96,7 +97,7 @@ router.post("/register", async (req, res) => {
   }
   
   const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, uploadDir), // Use the absolute path
+    destination: (req, file, cb) => cb(null, uploadDir), 
     filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname)),
   });
   
@@ -104,17 +105,21 @@ router.post("/register", async (req, res) => {
 
   router.post("/update-profile", upload.single("profileImage"), async (req, res) => {
     try {
-        console.log("Uploaded file:", req.file); // Debugging line
-        if (!req.file) {
-            return res.status(400).json({ message: "No file uploaded!" });
+        const { email, name, phone, location } = req.body;
+
+        if (!email) {
+            return res.status(400).json({ message: "Email is required to update profile" });
         }
 
-        const { email, name, phone, location } = req.body;
-        const imageUrl = `http://localhost:5000/uploads/${req.file.filename}`;
+        let updateFields = { name, phone, location };
+
+        if (req.file) {
+            updateFields.profileImage = `http://localhost:5000/uploads/${req.file.filename}`;
+        }
 
         const user = await User.findOneAndUpdate(
             { email },
-            { $set: { name, phone, location, profileImage: imageUrl } },
+            { $set: updateFields },
             { new: true }
         );
 
@@ -122,12 +127,17 @@ router.post("/register", async (req, res) => {
             return res.status(404).json({ message: "User not found" });
         }
 
-        res.json({ message: "Profile updated successfully!", imageUrl, user });
+        res.json({ 
+            message: "Profile updated successfully!", 
+            user 
+        });
+
     } catch (error) {
         console.error("Error updating profile:", error);
         res.status(500).json({ message: "Server error. Please try again." });
     }
 });
+
 
 
 router.get("/get-image/:email", async (req, res) => {
@@ -357,18 +367,16 @@ router.post('/reset-password', async (req, res) => {
 
 
 router.put('/update-password', async (req, res) => {
-  // Check if user is logged in via session
-  if (!req.session.userId) {
+  const { currentPassword, newPassword, email } = req.body;
+
+  if (!email) {
     return res.status(401).json({ 
       success: false,
       message: 'Not authenticated. Please login first.' 
     });
   }
-
-  const { currentPassword, newPassword, confirmPassword } = req.body;
-
-  // Validate inputs
-  if (!cPassword || !newPassword || !confirmPassword) {
+  
+  if (!currentPassword || !newPassword) {
     return res.status(400).json({ 
       success: false,
       message: 'All password fields are required' 
@@ -382,16 +390,8 @@ router.put('/update-password', async (req, res) => {
     });
   }
 
-  if (newPassword !== confirmPassword) {
-    return res.status(400).json({ 
-      success: false,
-      message: 'New passwords do not match' 
-    });
-  }
-
   try {
-    // Find user by session ID
-    const user = await User.findById(req.session.userId);
+    const user = await User.findOne({ email });
     if (!user) {
       return res.status(404).json({ 
         success: false,
@@ -399,7 +399,6 @@ router.put('/update-password', async (req, res) => {
       });
     }
 
-    // Verify current password (plaintext comparison as in your login)
     if (user.password !== currentPassword) {
       return res.status(401).json({ 
         success: false,
@@ -407,15 +406,13 @@ router.put('/update-password', async (req, res) => {
       });
     }
 
-    // Check if new password is different
     if (currentPassword === newPassword) {
       return res.status(400).json({ 
         success: false,
-        message: 'New password must be different from current password' 
+        message: 'New password must be different from the current password' 
       });
     }
 
-    // Update password (in plaintext to match your login system)
     user.password = newPassword;
     await user.save();
 
@@ -432,8 +429,5 @@ router.put('/update-password', async (req, res) => {
     });
   }
 });
-
-
-
 
 module.exports = router;

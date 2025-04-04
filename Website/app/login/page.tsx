@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { AlertCircle, Loader2 } from "lucide-react"
@@ -11,9 +11,11 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { toast } from "sonner"
+import { useRouter } from "next/navigation"
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter()
   const [formData, setFormData] = useState({
     email: "",
     password: ""
@@ -22,6 +24,30 @@ export default function LoginPage() {
     email: "",
     password: ""
   })
+  const[user, setUserData] = useState({})
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_NODE_API_URL}/api/auth/check-auth`, {
+          credentials: "include",
+        });
+
+        if (response.ok) {
+          throw new Error("Not authenticated");
+        }
+        const data = await response.json();
+
+        setUserData(data.user);
+
+      } catch (error) {
+        console.error("Auth check failed:", error);
+        router.replace("/")
+      }
+    };
+
+    checkAuth();
+  }, []);
 
   // Validation functions
   const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
@@ -70,7 +96,7 @@ export default function LoginPage() {
     setIsLoading(true)
     
     try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_NODE_API_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -97,7 +123,7 @@ export default function LoginPage() {
       // Store token in localStorage or cookies if needed
       document.cookie = `token=${data.token}; path=/;`
       toast.success("Login successful!")
-      window.location.href = "/food-map"
+      router.replace("/food-map")
     } catch (error) {
       toast.error('Network error. Please try again later.')
       console.error('Login error:', error)
@@ -123,7 +149,7 @@ export default function LoginPage() {
                   id="email" 
                   name="email" 
                   type="email" 
-                  placeholder="you@example.com" 
+                  placeholder="Enter you email address" 
                   value={formData.email} 
                   onChange={handleChange} 
                   required 

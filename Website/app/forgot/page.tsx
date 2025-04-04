@@ -37,7 +37,7 @@ export default function ResetPasswordPage() {
     setIsLoading(true)
     
     try {
-      const response = await fetch('http://localhost:5000/api/auth/forgot-password', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_NODE_API_URL}/api/auth/forgot-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -70,7 +70,7 @@ export default function ResetPasswordPage() {
   const handleResend = async () => {
     setIsLoading(true)
     try {
-      const response = await fetch('http://localhost:5000/api/auth/forgot-password', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_NODE_API_URL}/api/auth/forgot-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -116,7 +116,7 @@ export default function ResetPasswordPage() {
     setIsLoading(true)
     
     try {
-      const response = await fetch('http://localhost:5000/api/auth/reset-password', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_NODE_API_URL}/api/auth/reset-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

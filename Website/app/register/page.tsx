@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { ArrowLeft, Loader2 } from "lucide-react"
@@ -11,11 +11,13 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "sonner"
+import { useRouter } from "next/navigation"
 
 export default function RegisterPage() {
   const [step, setStep] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
   const [userType, setUserType] = useState("seeker")
+  const router = useRouter()
 
   const [formData, setFormData] = useState({
     name: "",
@@ -38,6 +40,31 @@ export default function RegisterPage() {
     zip: "",
     kitchenName: ""
   })
+
+    const[user, setUserData] = useState({})
+  
+    useEffect(() => {
+      const checkAuth = async () => {
+        try {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_NODE_API_URL}/api/auth/check-auth`, {
+            credentials: "include",
+          });
+  
+          if (response.ok) {
+            throw new Error("Not authenticated");
+          }
+          const data = await response.json();
+  
+          setUserData(data.user);
+  
+        } catch (error) {
+          console.error("Auth check failed:", error);
+          router.replace("/")
+        }
+      };
+  
+      checkAuth();
+    }, []);
 
   // Validation functions
   const validateName = (name: string) => /^[A-Za-z\s]+$/.test(name)
@@ -145,7 +172,7 @@ export default function RegisterPage() {
     }
   
     try {
-      const response = await fetch("http://localhost:5000/api/auth/register", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_NODE_API_URL}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(userData),
@@ -157,7 +184,7 @@ export default function RegisterPage() {
   
       if (response.ok) {
         toast.success("Registration successful!")
-        window.location.href = "/login"
+        router.replace("/login")
       } else {
         toast.error("User already exists with this email")
       }

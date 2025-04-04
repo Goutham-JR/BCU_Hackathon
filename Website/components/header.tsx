@@ -19,7 +19,7 @@ export default function Header() {
   useEffect(() => {
     async function checkAuth() {
       try {
-        const response = await fetch("http://localhost:5000/api/auth/check-auth", { credentials: "include",  })
+        const response = await fetch(`${process.env.NEXT_PUBLIC_NODE_API_URL}/api/auth/check-auth`, { credentials: "include",  })
         const data = await response.json();
 
         if (response.ok) {
@@ -40,13 +40,13 @@ export default function Header() {
 
   const handleLogout = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/auth/logout`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_NODE_API_URL}/api/auth/logout`, {
         method: 'POST',
         credentials: 'include',
       });
   
       if (response.ok) {
-        window.location.href = '/';
+        router.replace("/")
       } else {
         console.error('Logout failed:', await response.json());
       }

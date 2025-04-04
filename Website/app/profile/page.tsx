@@ -1,9 +1,36 @@
 'use client'
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 export default function Profile() {
-  const [activeSection, setActiveSection] = useState('profile');  
+  const [activeSection, setActiveSection] = useState('profile'); 
+  const router = useRouter() 
+    const[users, setUserData] = useState({})
+  
+    useEffect(() => {
+      const checkAuth = async () => {
+        try {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_NODE_API_URL}/api/auth/check-auth`, {
+            credentials: "include",
+          });
+  
+          if (!response.ok) {
+            throw new Error("Not authenticated");
+          }
+          const data = await response.json();
+  
+          setUserData(data.user);
+  
+        } catch (error) {
+          console.error("Auth check failed:", error);
+          router.replace("/login")
+        }
+      };
+  
+      checkAuth();
+    }, [router]);
+
   const [user, setUser] = useState({
     name: '',
     email: '',
@@ -38,7 +65,7 @@ export default function Profile() {
   useEffect(() => {
     async function checkAuth() {
       try {
-        const response = await fetch("http://localhost:5000/api/auth/check-auth", { 
+        const response = await fetch(`${process.env.NEXT_PUBLIC_NODE_API_URL}/api/auth/check-auth`, { 
           credentials: "include"  
         });
         const data = await response.json();
@@ -52,11 +79,11 @@ export default function Profile() {
             profileImage: data.user.profileImage || ''
           });
         } else {
-          window.location.href = '/login';
+          router.replace("/login")
         }
       } catch (error) {
         console.error("Auth check failed", error);
-        window.location.href = '/login';
+        router.replace("/login")
       }
     }
     checkAuth();
@@ -96,7 +123,7 @@ export default function Profile() {
     }
 
     try {
-      const response = await fetch("http://localhost:5000/api/auth/update-profile", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_NODE_API_URL}/api/auth/update-profile`, {
         method: "POST",
         body: formData,
         credentials: "include",
@@ -110,6 +137,7 @@ export default function Profile() {
           ...prev, 
           profileImage: data.imageUrl || prev.profileImage,
         }));
+        LogOut()
       } else {
         toast.error(data.message || "Profile update failed.");
       }
@@ -118,6 +146,23 @@ export default function Profile() {
       toast.error("Failed to update profile. Please try again.");
     }
   };
+
+  const LogOut = async() => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_NODE_API_URL}/api/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+  
+      if (response.ok) {
+        router.replace("/")
+      } else {
+        console.error('Logout failed:', await response.json());
+      }
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
+  }
 
   const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -154,13 +199,14 @@ export default function Profile() {
     }
 
     try {
-      const response = await fetch("http://localhost:5000/api/auth/update-password", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_NODE_API_URL}/api/auth/update-password`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
         credentials: "include",
         body: JSON.stringify({
+          email:user.email,
           currentPassword: passwordData.currentPassword,
           newPassword: passwordData.newPassword
         })
@@ -248,7 +294,7 @@ export default function Profile() {
             className="w-full px-4 py-2 text-white hover:bg-purple-700 rounded-lg"
             onClick={() => {
               document.cookie = 'token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-              window.location.href = '/login';
+              router.replace("/login")
             }}
           >
             Logout
@@ -308,7 +354,7 @@ export default function Profile() {
               <div className="flex justify-center">
                 <button
                   type="submit"
-                  className="px-6 py-2 bg-purple-700 hover:bg-purple-500 text-white rounded-lg transition-colors"
+                  className="px-6 py-2 bg-purple-700 hover:bg-purple-500 text-white rounded-lg transition-colors mb-2"
                 >
                   Update Profile
                 </button>

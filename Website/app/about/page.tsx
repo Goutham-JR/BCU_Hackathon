@@ -108,7 +108,7 @@ export default function AboutUs() {
             transition={{ duration: 0.8, delay: 0.5 }}
             className="text-lg md:text-xl max-w-3xl text-gray-100"
           >
-            Nourishing our community with dignity, respect, and delicious food since 2015
+            Nourishing our community with dignity, respect, and delicious food since 2025
           </motion.p>
         </div>
       </motion.section>
@@ -141,7 +141,7 @@ export default function AboutUs() {
                 { icon: <Users className="w-8 h-8 text-white" />, stat: "200+", label: "Active Volunteers" },
                 {
                   icon: <Calendar className="w-8 h-8 text-white" />,
-                  stat: "Since 2015",
+                  stat: "Since 2025",
                   label: "Serving Our Community",
                 },
                 { icon: <MapPin className="w-8 h-8 text-white" />, stat: "3 Locations", label: "Throughout the City" },

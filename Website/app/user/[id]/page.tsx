@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
 import { motion } from "framer-motion"
@@ -76,7 +76,91 @@ const USER_FOOD_LISTINGS = [
 
 export default function UserProfilePage({ params }: { params: { id: string } }) {
   const searchParams = useSearchParams()
-  const foodId = searchParams.get("food") ? Number.parseInt(searchParams.get("food") as string) : null
+  const foodId = searchParams.get("id") 
+  const [user, setUser] = useState<any>(null);
+  const router = useRouter()
+const [food, setFood] = useState<any>(null);
+useEffect(() => {
+  async function fetchFood() {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_NODE_API_URL}/api/donate/fetches/${foodId}`, {
+        credentials: "include",
+      });
+      const data = await response.json();
+
+      if (response.ok) {
+        setFood(data); // This should contain donorEmail
+      } else {
+        setFood(null);
+      }
+    } catch (error) {
+      console.error("Fetching food failed", error);
+      setFood(null);
+    }
+  }
+
+  if (foodId) {
+    fetchFood();
+  }
+}, [foodId]);
+
+  const[users, setUserData] = useState({})
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_NODE_API_URL}/api/auth/check-auth`, {
+          credentials: "include",
+        });
+
+        if (!response.ok) {
+          throw new Error("Not authenticated");
+        }
+        const data = await response.json();
+
+        setUserData(data.user);
+
+      } catch (error) {
+        console.error("Auth check failed:", error);
+        router.replace("/login")
+      }
+    };
+
+    checkAuth();
+  }, [router]);
+
+useEffect(() => {
+  async function checkAuth() {
+    if (!food?.donoremail) return; // Wait until donorEmail is present
+
+    console.log("Looking up user with email:", food.donoremail);
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_NODE_API_URL}/api/auth/search/${food.donoremail}`, {
+        credentials: "include",
+      });
+      const data = await response.json();
+
+      if (response.ok) {
+        setUser(data.user); // Or just data, depending on your backend
+      } else {
+        setUser(null);
+      }
+    } catch (error) {
+      console.error("Auth check failed", error);
+      setUser(null);
+    }
+  }
+
+  checkAuth();
+}, [food?.donoremail]); // Only run when food.donorEmail becomes available
+
+console.log("food:", food);
+console.log("user:", user);
+
+
+console.log("food:", food);
+console.log("user:", user);
 
   const [selectedFood, setSelectedFood] = useState<(typeof USER_FOOD_LISTINGS)[0] | null>(null)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
@@ -97,34 +181,34 @@ export default function UserProfilePage({ params }: { params: { id: string } }) 
   }, [foodId])
 
   const nextImage = () => {
-    if (selectedFood) {
-      setCurrentImageIndex((currentImageIndex + 1) % selectedFood.images.length)
+    if (food) {
+      setCurrentImageIndex((currentImageIndex + 1) % food.images.length)
     }
   }
 
   const prevImage = () => {
-    if (selectedFood) {
-      setCurrentImageIndex((currentImageIndex - 1 + selectedFood.images.length) % selectedFood.images.length)
+    if (food) {
+      setCurrentImageIndex((currentImageIndex - 1 + food.images.length) % food.images.length)
     }
   }
 
+  const possibleReplies = [
+    "Yes, it's still available! When can you pick it up?",
+    "Sorry, this item has been claimed.",
+    "I can hold it for you until tomorrow.",
+  ];
+  
   const sendMessage = () => {
     if (message.trim()) {
-      setMessages([...messages, { text: message, sender: "user" }])
-      setMessage("")
-
-      // Simulate response
+      setMessages([...messages, { text: message, sender: "user" }]);
+      setMessage("");
+  
       setTimeout(() => {
-        setMessages((prev) => [
-          ...prev,
-          {
-            text: "Thanks for your interest! Yes, the food is still available. When would you like to pick it up?",
-            sender: "other",
-          },
-        ])
-      }, 1000)
+        const randomReply = possibleReplies[Math.floor(Math.random() * possibleReplies.length)];
+        setMessages((prev) => [...prev, { text: randomReply, sender: "other" }]);
+      }, 1000);
     }
-  }
+  };
 
   return (
     <main className="container mx-auto py-6 px-4">
@@ -138,65 +222,77 @@ export default function UserProfilePage({ params }: { params: { id: string } }) 
         <Card className="md:col-span-1">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-              <Avatar className="h-24 w-24">
-                <AvatarImage src={USER_DATA.avatar} alt={USER_DATA.name} />
-                <AvatarFallback>{USER_DATA.name.charAt(0)}</AvatarFallback>
-              </Avatar>
+            <Avatar className="h-24 w-24">
+  {user ? (
+    <>
+      <AvatarImage src={user.profileImage} alt={user.name} />
+      <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+    </>
+  ) : (
+    <AvatarFallback>?</AvatarFallback> // Show a fallback if user is null
+  )}
+</Avatar>
+
             </div>
-            <CardTitle className="text-xl">{USER_DATA.name}</CardTitle>
-            <CardDescription className="flex items-center justify-center">
-              <Star className="h-4 w-4 text-yellow-500 mr-1" />
-              {USER_DATA.rating} ({USER_DATA.reviews} reviews)
-            </CardDescription>
+            <CardTitle className="text-xl">{user?.name}</CardTitle>
+            
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-start">
               <MapPin className="h-5 w-5 text-gray-500 mr-3 mt-0.5" />
               <div>
                 <p className="text-sm font-medium">Location</p>
-                <p className="text-sm text-gray-600">{USER_DATA.address}</p>
+                <p className="text-sm text-gray-600">{user?.address}</p>
               </div>
             </div>
             <div className="flex items-start">
               <Phone className="h-5 w-5 text-gray-500 mr-3 mt-0.5" />
               <div>
                 <p className="text-sm font-medium">Phone</p>
-                <p className="text-sm text-gray-600">{USER_DATA.phone}</p>
+                <p className="text-sm text-gray-600">{user?.phone}</p>
               </div>
             </div>
             <div className="flex items-start">
               <Clock className="h-5 w-5 text-gray-500 mr-3 mt-0.5" />
               <div>
                 <p className="text-sm font-medium">Member Since</p>
-                <p className="text-sm text-gray-600">{USER_DATA.joinedDate}</p>
+                <p className="text-sm text-gray-600">
+  {user?.createdAt ? new Date(user.createdAt).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  }) : "N/A"}
+</p>
+
               </div>
             </div>
-            <div className="pt-2">
-              <p className="text-sm text-gray-600">{USER_DATA.bio}</p>
-            </div>
+            
           </CardContent>
           <CardFooter>
             <Button className="w-full bg-purple-600 hover:bg-purple-700" onClick={() => setChatOpen(true)}>
               <MessageCircle className="h-4 w-4 mr-2" />
-              Contact {USER_DATA.name.split(" ")[0]}
+              Contact {user?.name.split(" ")[0]}
             </Button>
           </CardFooter>
         </Card>
 
         {/* Food Details */}
         <Card className="md:col-span-2">
-          {selectedFood && (
+          {food && (
             <>
               <div className="relative h-64 md:h-80">
                 <Image
-                  src={selectedFood.images[currentImageIndex] || "/placeholder.svg"}
-                  alt={selectedFood.title}
+                  src={food?.images?.[currentImageIndex] 
+                    ? `${process.env.NEXT_PUBLIC_NODE_API_URL}/uploads/${food.images[currentImageIndex]}` 
+                    : "/placeholder.svg"}
+                  
+                  alt={food?.title}
                   fill
                   className="object-fit"
                 />
 
                 {/* Image navigation */}
-                {selectedFood.images.length > 1 && (
+                {food.images.length > 1 && (
                   <>
                     <button
                       className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 text-white rounded-full p-2"
@@ -211,7 +307,7 @@ export default function UserProfilePage({ params }: { params: { id: string } }) 
                       <ChevronRight className="h-6 w-6" />
                     </button>
                     <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
-                      {selectedFood.images.map((_, index) => (
+                      {food.images.map((_, index) => (
                         <div
                           key={index}
                           className={`w-2 h-2 rounded-full ${index === currentImageIndex ? "bg-white" : "bg-white/50"}`}
@@ -221,8 +317,8 @@ export default function UserProfilePage({ params }: { params: { id: string } }) 
                   </>
                 )}
 
-                <Badge className={`absolute top-4 right-4 ${selectedFood.isVeg ? "bg-green-500" : "bg-orange-500"}`}>
-                  {selectedFood.isVeg ? (
+                <Badge className={`absolute top-4 right-4 ${food.isVeg ? "bg-green-500" : "bg-orange-500"}`}>
+                  {food.isVeg ? (
                     <span className="flex items-center">
                       <Leaf className="h-3 w-3 mr-1" /> Vegetarian
                     </span>
@@ -235,21 +331,18 @@ export default function UserProfilePage({ params }: { params: { id: string } }) 
               </div>
 
               <CardHeader>
-                <CardTitle className="text-xl">{selectedFood.title}</CardTitle>
+                <CardTitle className="text-xl">{food.title}</CardTitle>
                 <CardDescription className="flex items-center space-x-4">
                   <span className="flex items-center">
                     <Clock className="h-4 w-4 mr-1" />
-                    Prepared {selectedFood.prepTime}
+                    Prepared {food.preparationTime}
                   </span>
-                  <span className="flex items-center">
-                    <Utensils className="h-4 w-4 mr-1" />
-                    Serves {selectedFood.servings}
-                  </span>
+                  
                 </CardDescription>
               </CardHeader>
 
               <CardContent className="space-y-4">
-                <p className="text-gray-700">{selectedFood.description}</p>
+                <p className="text-gray-700">{food.description}</p>
 
                 <div className="pt-2">
                   <h3 className="text-sm font-medium mb-2">Pickup Location</h3>
@@ -257,13 +350,13 @@ export default function UserProfilePage({ params }: { params: { id: string } }) 
                     <SimpleMap
                       listings={[
                         {
-                          ...selectedFood,
-                          id: selectedFood.id,
-                          userId: USER_DATA.id,
-                          timePosted: selectedFood.prepTime,
+                          ...food,
+                          id: food.id,
+                          userId: user?.id,
+                          timePosted: food.prepTime,
                         },
                       ]}
-                      selectedListing={selectedFood.id}
+                      selectedListing={food.id}
                       setSelectedListing={() => {}}
                     />
                   </div>
@@ -291,17 +384,17 @@ export default function UserProfilePage({ params }: { params: { id: string } }) 
 
         {/* Other Food by this User */}
         <div className="md:col-span-3">
-          <h2 className="text-xl font-bold mb-4">More Food from {USER_DATA.name}</h2>
+          <h2 className="text-xl font-bold mb-4">More Food from {user?.name}</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {USER_FOOD_LISTINGS.map((food) => (
               <Link
-                href={`/user/${params.id}?food=${food.id}`}
+                href={`/user/food?id=${food.id}`}
                 key={food.id}
-                className={selectedFood?.id === food.id ? "pointer-events-none" : ""}
+                className={food?.id === food.id ? "pointer-events-none" : ""}
               >
                 <Card
                   className={`overflow-hidden hover:shadow-lg transition-shadow ${
-                    selectedFood?.id === food.id ? "border-2 border-purple-500" : ""
+                    food?.id === food.id ? "border-2 border-purple-500" : ""
                   }`}
                 >
                   <div className="relative h-48 w-full">
@@ -335,14 +428,14 @@ export default function UserProfilePage({ params }: { params: { id: string } }) 
 
       {/* Chat Dialog */}
       <Dialog open={chatOpen} onOpenChange={setChatOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md z-[1000]">
           <DialogHeader>
             <DialogTitle className="flex items-center">
               <Avatar className="h-8 w-8 mr-2">
-                <AvatarImage src={USER_DATA.avatar} alt={USER_DATA.name} />
-                <AvatarFallback>{USER_DATA.name.charAt(0)}</AvatarFallback>
+                <AvatarImage src={user?.profileImage} alt={user?.name} />
+                <AvatarFallback>{user?.name.charAt(0)}</AvatarFallback>
               </Avatar>
-              Chat with {USER_DATA.name}
+              Chat with {user?.name}
             </DialogTitle>
             <DialogDescription>Discuss pickup details and ask questions about the food</DialogDescription>
           </DialogHeader>

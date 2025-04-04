@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { motion } from "framer-motion"
@@ -18,8 +18,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import SimpleMap from "@/components/simple-map"
+import { useRouter } from "next/navigation"
 
-// Mock data for food listings
 const FOOD_LISTINGS = [
   {
     id: 1,
@@ -73,8 +73,64 @@ export default function FoodMapPage() {
   const [foodType, setFoodType] = useState<"all" | "veg" | "nonveg">("all")
   const [selectedListing, setSelectedListing] = useState<number | null>(null)
 
+
+  
+  
+// Mock data for food listings
+const [donation, setDonation] = useState<any[]>([])
+
+useEffect(() => {
+  async function fetchDonations() {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_NODE_API_URL}/api/donate/fetch`, {
+        credentials: "include",
+      });
+      const data = await response.json();
+
+      if (response.ok && Array.isArray(data)) {
+        const updatedListings = data.map((item: any, index: number) => {
+          const createdTime = new Date(item.createdAt);
+          const now = new Date();
+          const diffMs = now.getTime() - createdTime.getTime();
+          const diffMins = Math.floor(diffMs / 60000);
+
+          let timePosted = "";
+          if (diffMins < 1) timePosted = "Just now";
+          else if (diffMins < 60) timePosted = `${diffMins} minutes ago`;
+          else if (diffMins < 1440)
+            timePosted = `${Math.floor(diffMins / 60)} hour(s) ago`;
+          else timePosted = `${Math.floor(diffMins / 1440)} day(s) ago`;
+
+          return {
+            id: item._id,
+            title: item.title,
+            description: item.description,
+            image: `${process.env.NEXT_PUBLIC_NODE_API_URL}/uploads/${item.images?.[0]}` || "", // fallback to empty string if no image
+            distance: item.distance || "N/A",
+            timePosted,
+            isVeg: item.foodType,
+            userId: item.userId,
+            location: item.location || { lat: 0, lng: 0 },
+          };
+        });
+
+        setDonation(updatedListings);
+      } else {
+        setDonation([]);
+      }
+    } catch (error) {
+      console.error("Error fetching donations:", error);
+      setDonation([]);
+    }
+  }
+
+  fetchDonations();
+}, []);
+
+
+
   // Filter listings based on search and food type
-  const filteredListings = FOOD_LISTINGS.filter((listing) => {
+  const filteredListings = donation.filter((listing) => {
     const matchesSearch =
       listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       listing.description.toLowerCase().includes(searchQuery.toLowerCase())
@@ -94,7 +150,7 @@ export default function FoodMapPage() {
           {/* Search and Filter Bar */}
           <div className="flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">
-              <Search className="bg-purple-500 hover:bg-purple-400 text-white" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
               <Input
                 placeholder="Search for food..."
                 className="pl-10"
@@ -148,7 +204,7 @@ export default function FoodMapPage() {
             {view === "list" ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredListings.map((listing) => (
-                  <Link href={`/user/${listing.userId}?food=${listing.id}`} key={listing.id}>
+                  <Link href={`/user/food?id=${listing.id}`} key={listing.id}>
                     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
                       <div className="relative h-48 w-full">
                         <Image
@@ -157,8 +213,8 @@ export default function FoodMapPage() {
                           fill
                           className="object-cover"
                         />
-                        <Badge className={`absolute top-2 right-2 ${listing.isVeg ? "bg-green-500" : "bg-orange-500"}`}>
-                          {listing.isVeg ? (
+                        <Badge className={`absolute top-2 right-2 ${listing.isVeg == "veg" ? "bg-green-500" : "bg-orange-500"}`}>
+                          {listing.isVeg == "veg" ? (
                             <span className="flex items-center">
                               <Leaf className="h-3 w-3 mr-1" /> Veg
                             </span>
